@@ -1,4 +1,4 @@
-from discord import Option, Member, SlashCommandGroup, PermissionOverwrite, guild
+from discord import Option, Member, SlashCommandGroup, PermissionOverwrite, guild, AutocompleteContext
 from Backend.Player import Alliance, PlayerManager
 import sys
 import os
@@ -25,10 +25,10 @@ def format_mentions(members):
 )
 async def found(ctx,
                 name: Option(str, name = "name", description = "Name of the alliance"), # type: ignore
-                member1: Option(Member, name = "founding Member", description = "Members of the alliance", required = True), # type: ignore
-                member2: Option(Member, name = "founding Member", description = "Members of the alliance", required = False), # type: ignore
-                member3: Option(Member, name = "founding Member", description = "Members of the alliance", required = False), # type: ignore
-                member4: Option(Member, name = "founding Member", description = "Members of the alliance", required = False) # type: ignore
+                member1: Option(Member, name = "member", description = "Members of the alliance", required = True), # type: ignore
+                member2: Option(Member, name = "member1", description = "Members of the alliance", required = False), # type: ignore
+                member3: Option(Member, name = "member2", description = "Members of the alliance", required = False), # type: ignore
+                member4: Option(Member, name = "member3", description = "Members of the alliance", required = False) # type: ignore
                 ):
     alliance = Alliance(name) #Name check
     await alliance.create_alliance(ctx.guild)
@@ -36,7 +36,7 @@ async def found(ctx,
     members = [ctx.author, member1, member2, member3, member4]
     members = [member for member in members if member is not None]
     for member in members:
-        alliance.add_member(member)
+        await alliance.add_member(member)
 
     member_mentions = format_mentions(members)
 
@@ -47,8 +47,8 @@ async def found(ctx,
     await ctx.respond(eventString, ephemeral=True)
 
 
-async def autocomplete_alliances(ctx):
-    return [(alliance.name, alliance) for alliance in PlayerManager.get_player(ctx.author).get_alliances()]
+async def autocomplete_alliances(ctx: AutocompleteContext):
+    return [alliance.name for alliance in PlayerManager.get_manager(ctx.interaction.guild).get_player(ctx.interaction.user).get_alliances()]
 
 @alliance.command(
     name="invite",
@@ -61,8 +61,8 @@ async def invite(ctx,
     if alliance is None:
         await ctx.respond(f"You are not Member of an Aliiance (uff)", ephemeral=True)
         return
-    alliance.add_member(member)
-    await alliance.get_text_channel().send(f"{member.mention} has been invited to {alliance}")
+    alliance: Alliance = PlayerManager.get_manager(ctx.guild).get_alliance(alliance)
+    await alliance.invite_member(member)
     await ctx.respond(f"{member.mention} has been invited to {alliance}", ephemeral=True)
 
 @alliance.command(
@@ -75,11 +75,9 @@ async def leave(ctx,
     if alliance is None:
         await ctx.respond(f"You are not Member of an Aliiance (uff)", ephemeral=True)
         return
-    alliance.remove_member(ctx.author)
-    await alliance.get_text_channel().send(f"{ctx.author.mention} has left the alliance")
-    if len(alliance.members) == 0:
-        await alliance.get_text_channel().send(f"The alliance has been disbanded")
-        PlayerManager.get_manager(ctx.guild).remove_alliance(alliance)
+    PlayMan = PlayerManager.get_manager(ctx.guild)
+    alliance = PlayMan.get_alliance(alliance)
+    await alliance.remove_member(ctx.author)
     await ctx.respond(f"You have left the alliance", ephemeral=True)
 
 @alliance.command(
@@ -88,12 +86,11 @@ async def leave(ctx,
 )
 async def rename(ctx,
                 alliance: Option(str, name = "alliances", description = "Name of the alliance", autocomplete=autocomplete_alliances), # type: ignore
-                new_name: Option(str, name = "new name", description = "New name of the alliance") # type: ignore
+                new_name: Option(str, name = "new", description = "New name of the alliance") # type: ignore
                 ):
     if alliance is None:
         await ctx.respond(f"You are not Member of an Aliiance (uff)", ephemeral=True)
         return
-    PlayerManager.get_manager(ctx.guild).rename_alliance(alliance, new_name)
-    
-    await alliance.get_text_channel().edit(name=new_name)
+    PlayMan: PlayerManager = PlayerManager.get_manager(ctx.guild)
+    await PlayMan.rename_alliance(PlayMan.get_alliance(alliance), new_name)
     await ctx.respond(f"The alliance has been renamed to {new_name}", ephemeral=True)

@@ -1,4 +1,3 @@
-# Figure out why python-libnacl doesn't install
 import discord
 from discord.ext import commands
 import dotenv
@@ -15,6 +14,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 BotManager.setBot(bot)
 
 import Commands.alliance
+import Commands.gm
 
 @bot.event
 async def on_ready():
