@@ -1,7 +1,8 @@
 from discord import Option, Member, SlashCommandGroup, PermissionOverwrite, guild, AutocompleteContext
-from Backend.Player import Alliance, PlayerManager, GalacticCommunity
-import sys
-import os
+
+from Backend.Alliance import Alliance
+from Backend.GalacticCommunity import GalacticCommunity
+from Backend.GameManager import GameManager
 
 from discordBackend.BotManager import BotManager
 
@@ -13,7 +14,10 @@ galcom = BotManager.getBot().create_group("galcom", "Galactic Community commands
     description="Leave the Galactic Community",
 )
 async def leave(ctx):
-    PlayMan: PlayerManager = PlayerManager.get_manager(ctx.guild)
+    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
+    if PlayMan.can_act() is False:
+        await ctx.respond(f"You are not allowed to found an alliance", ephemeral=True)
+        return
     galCom: GalacticCommunity = PlayMan.get_galcom()
     if galCom is None:
         await ctx.respond("The Galactic Community has not been founded", ephemeral=True)
@@ -36,7 +40,10 @@ async def leave(ctx):
     description = "Join the Galactic Community"
 )
 async def join(ctx):
-    PlayMan: PlayerManager = PlayerManager.get_manager(ctx.guild)
+    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
+    if PlayMan.can_act() is False:
+        await ctx.respond(f"You are not allowed to found an alliance", ephemeral=True)
+        return
     galcom: GalacticCommunity = PlayMan.get_galcom()
     if galcom == None:
         await ctx.respond("The Galactic Community has not been created")

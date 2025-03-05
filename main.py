@@ -15,6 +15,7 @@ BotManager.setBot(bot)
 
 import Commands.alliance
 import Commands.gm
+import Commands.galcom
 
 @bot.event
 async def on_ready():

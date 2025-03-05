@@ -1,7 +1,8 @@
 from discord import Option, Member, SlashCommandGroup, PermissionOverwrite, guild, AutocompleteContext
-from Backend.Player import Alliance, PlayerManager, GalacticCommunity, GameState
-import sys
-import os
+
+from Backend.GameManager import GameManager, GameState
+from Backend.GalacticCommunity import GalacticCommunity
+from Backend.Alliance import Alliance
 
 from discordBackend.BotManager import BotManager
 
@@ -16,7 +17,7 @@ async def conclude(ctx):
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("Nope not your command", ephemeral=True)
         return
-    PlayMan: PlayerManager = PlayerManager.get_manager(ctx.guild)
+    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
     await PlayMan.conclude()
     await ctx.respond("The game has been concluded", ephemeral=True)
 
@@ -28,7 +29,10 @@ async def foundgalcom(ctx):
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("Nope not your command", ephemeral=True)
         return
-    PlayMan: PlayerManager = PlayerManager.get_manager(ctx.guild)
+    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
+    if PlayMan.get_galcom() is not None:
+        await ctx.respond("The Galactic Community has already been founded", ephemeral=True)
+        return
     await PlayMan.found_galcom()
     await ctx.respond("The Galactic Community has been founded", ephemeral=True)
 
@@ -45,7 +49,7 @@ async def setcouncilors(ctx,
     ):
     councilors = [councilor1, councilor2, councilor3, councilor4, councilor5]
     councilors = [councilor for councilor in councilors if councilor is not None]
-    PlayMan: PlayerManager = PlayerManager.get_manager(ctx.guild)
+    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
     galCom: GalacticCommunity = PlayMan.get_galcom()
     if galCom is None:
         await ctx.respond("The Galactic Community has not been founded, Aborted!", ephemeral=True)
@@ -67,8 +71,9 @@ async def setcouncilors(ctx,
 async def setcustodian(ctx,
                         custodian: Option(Member, name = "custodian", description = "Custodian of the Galactic Community", required = True) # type: ignore
     ):
-    PlayMan: PlayerManager = PlayerManager.get_manager(ctx.guild)
+    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
     galCom = PlayMan.get_galcom()
+
     if galCom is None:
         await ctx.respond("The Galactic Community has not been founded, Aborted!", ephemeral=True)
         return
@@ -90,7 +95,7 @@ async def start(ctx):
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("Nope not your command", ephemeral=True)
         return
-    PlayMan: PlayerManager = PlayerManager.get_manager(ctx.guild)
+    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
     if not PlayMan.is_stopped():
         await ctx.respond("The game has already started", ephemeral=True)
         return
@@ -105,7 +110,7 @@ async def pause(ctx):
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("Nope not your command", ephemeral=True)
         return
-    PlayMan: PlayerManager = PlayerManager.get_manager(ctx.guild)
+    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
     if PlayMan.is_stopped():
         await ctx.respond("The game has already been paused", ephemeral=True)
         return
@@ -121,7 +126,7 @@ async def init(ctx,
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("Nope not your command", ephemeral=True)
         return
-    PlayMan: PlayerManager = PlayerManager.get_manager(ctx.guild)
+    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
     if PlayMan.is_init or PlayMan.get_gameState == GameState.STARTED:
         await ctx.respond("Game has already been initialized please conclude before restarting")
         return
