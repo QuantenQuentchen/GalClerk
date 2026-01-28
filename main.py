@@ -1,7 +1,14 @@
+import asyncio
+
 import discord
 from discord.ext import commands
 import dotenv
 import os
+
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
 
 from discordBackend.BotManager import BotManager
 dotenv.load_dotenv()  # Load environment variables from .env file
@@ -12,6 +19,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 
 BotManager.setBot(bot)
+
 
 import Commands.alliance
 import Commands.gm

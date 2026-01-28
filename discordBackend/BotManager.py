@@ -1,9 +1,14 @@
+from discord import Bot
 
 
 class BotManager:
-    bot = None
-    def setBot(bot):
+    bot: Bot = None
+
+    @staticmethod
+    def setBot(bot: Bot):
         BotManager.bot = bot
+
+    @staticmethod
     def getBot():
         return BotManager.bot
     

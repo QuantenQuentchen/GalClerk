@@ -1,11 +1,8 @@
-from discord import Option, Member, SlashCommandGroup, PermissionOverwrite, guild, AutocompleteContext
+from discord import Option, Member
 
-from Backend.GameManager import GameManager, GameState
 from Backend.GalacticCommunity import GalacticCommunity
-from Backend.Alliance import Alliance
-
+from Backend.GameManager import GameManager
 from discordBackend.BotManager import BotManager
-
 
 gm = BotManager.getBot().create_group("gm", "Game Master commands")
 
@@ -17,8 +14,9 @@ async def conclude(ctx):
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("Nope not your command", ephemeral=True)
         return
-    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
-    await PlayMan.conclude()
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
+    await ctx.respond("The game is being concluded... (due to callback delay no further reporting may happen for this command)", ephemeral=True)
+    await PlayMan.end()
     await ctx.respond("The game has been concluded", ephemeral=True)
 
 @gm.command(
@@ -29,12 +27,12 @@ async def foundgalcom(ctx):
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("Nope not your command", ephemeral=True)
         return
-    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
     if PlayMan.get_galcom() is not None:
         await ctx.respond("The Galactic Community has already been founded", ephemeral=True)
         return
+    await ctx.respond("The Galactic Community is being founded... (due to callback delay no further reporting may happen for this command)", ephemeral=True)
     await PlayMan.found_galcom()
-    await ctx.respond("The Galactic Community has been founded", ephemeral=True)
 
 @gm.command(
         name="setcouncilors",
@@ -47,9 +45,12 @@ async def setcouncilors(ctx,
                         councilor4: Option(Member, name = "councilor4", description = "Councilor of the Galactic Community", required = False), # type: ignore
                         councilor5: Option(Member, name = "councilor5", description = "Councilor of the Galactic Community", required = False), # type: ignore
     ):
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.respond("Nope not your command", ephemeral=True)
+        return
     councilors = [councilor1, councilor2, councilor3, councilor4, councilor5]
     councilors = [councilor for councilor in councilors if councilor is not None]
-    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
     galCom: GalacticCommunity = PlayMan.get_galcom()
     if galCom is None:
         await ctx.respond("The Galactic Community has not been founded, Aborted!", ephemeral=True)
@@ -61,7 +62,7 @@ async def setcouncilors(ctx,
         if galCom.is_head(councilor):
             await ctx.respond(f"{councilor.mention} is the head of the Galactic Community, Aborted!", ephemeral=True)
             return
-    galCom.set_councilors(councilors)
+    await galCom.set_senate(councilors)
     await ctx.respond("The councilors have been set", ephemeral=True)
 
 @gm.command(
@@ -71,7 +72,10 @@ async def setcouncilors(ctx,
 async def setcustodian(ctx,
                         custodian: Option(Member, name = "custodian", description = "Custodian of the Galactic Community", required = True) # type: ignore
     ):
-    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.respond("Nope not your command", ephemeral=True)
+        return
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
     galCom = PlayMan.get_galcom()
 
     if galCom is None:
@@ -80,11 +84,82 @@ async def setcustodian(ctx,
     if not galCom.is_member(custodian):
         await ctx.respond(f"{custodian.mention} is not a member of the Galactic Community, Aborted!", ephemeral=True)
         return
-    if galCom.custodian is None:
-        await galCom.set_custodian(custodian)
-    else:
-        await galCom.switch_custodian(custodian)
+
+    await galCom.setCustodian(custodian)
     await ctx.respond("The custodian has been set", ephemeral=True)
+
+@gm.command(
+    name="removecustodian",
+    description="Remove the custodian of the Galactic Community",
+)
+async def removecustodian(ctx):
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.respond("Nope not your command", ephemeral=True)
+        return
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
+    galCom = PlayMan.get_galcom()
+
+    if galCom is None:
+        await ctx.respond("The Galactic Community has not been founded, Aborted!", ephemeral=True)
+        return
+
+    await galCom.removeCustodian()
+    await ctx.respond("The custodian has been removed", ephemeral=True)
+
+
+@gm.command(
+    name="disbandsenate",
+    description="Disband the senate of the Galactic Community",
+)
+async def disbandsenate(ctx):
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.respond("Nope not your command", ephemeral=True)
+        return
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
+    galCom = PlayMan.get_galcom()
+
+    if galCom is None:
+        await ctx.respond("The Galactic Community has not been founded!", ephemeral=True)
+        return
+    await galCom.disbandSenate()
+
+    await ctx.respond("The senate has been disbanded", ephemeral=True)
+
+@gm.command(
+    name="setempire",
+    description="Set the emperor of the Galactic Empire",
+)
+async def setempire(ctx):
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.respond("Nope not your command", ephemeral=True)
+        return
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
+    galCom = PlayMan.get_galcom()
+
+    if galCom is None:
+        await ctx.respond("The Galactic Community has not been founded!", ephemeral=True)
+        return
+    await galCom.setEmpire()
+
+    await ctx.respond("The emperor has been set", ephemeral=True)
+
+@gm.command(
+    name="setsenate",
+    description="Set the emperor of the Galactic Empire",
+)
+async def setsenate(ctx):
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.respond("Nope not your command", ephemeral=True)
+        return
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
+    galCom = PlayMan.get_galcom()
+
+    if galCom is None:
+        await ctx.respond("The Galactic Community has not been founded!", ephemeral=True)
+        return
+
+    await galCom.setSenate()
+    await ctx.respond("The Emperor has been bloodily deposed", ephemeral=True)
 
 
 @gm.command(
@@ -95,12 +170,17 @@ async def start(ctx):
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("Nope not your command", ephemeral=True)
         return
-    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
-    if not PlayMan.is_stopped():
-        await ctx.respond("The game has already started", ephemeral=True)
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
+    if PlayMan.is_created():
+        await ctx.respond("The game has been started", ephemeral=True)
+        await PlayMan.start()
         return
-    await PlayMan.start(ctx.guild)
-    await ctx.respond("The game has been started", ephemeral=True)
+
+    if PlayMan.is_stopped():
+        await ctx.respond("The game has been continued", ephemeral=True)
+        await PlayMan.start()
+        return
+    await ctx.respond("The game is already running", ephemeral=True)
 
 @gm.command(
     name="pause",
@@ -110,25 +190,9 @@ async def pause(ctx):
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("Nope not your command", ephemeral=True)
         return
-    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
     if PlayMan.is_stopped():
         await ctx.respond("The game has already been paused", ephemeral=True)
         return
-    await PlayMan.pause(ctx.guild)
+    await PlayMan.pause()
     await ctx.respond("The game has been paused", ephemeral=True)
-
-@gm.command(
-    name="init",
-    description="Initializes a new Game"
-)
-async def init(ctx, 
-            name: Option(str, name="game_name", description="Name of the Game", required=False)): #type: ignore
-    if not ctx.author.guild_permissions.administrator:
-        await ctx.respond("Nope not your command", ephemeral=True)
-        return
-    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
-    if PlayMan.is_init or PlayMan.get_gameState == GameState.STARTED:
-        await ctx.respond("Game has already been initialized please conclude before restarting")
-        return
-    PlayMan.init(name)
-    return

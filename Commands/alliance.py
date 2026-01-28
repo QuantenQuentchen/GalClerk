@@ -1,11 +1,8 @@
-from discord import Option, Member, SlashCommandGroup, PermissionOverwrite, guild, AutocompleteContext
+from discord import Option, Member, AutocompleteContext
 
-from Backend.GameManager import GameManager
 from Backend.Alliance import Alliance
-
-
+from Backend.GameManager import GameManager
 from discordBackend.BotManager import BotManager
-
 
 alliance = BotManager.getBot().create_group("alliance", "Found, join and manage alliances")
 
@@ -28,7 +25,7 @@ async def found(ctx,
                 member3: Option(Member, name = "member2", description = "Members of the alliance", required = False), # type: ignore
                 member4: Option(Member, name = "member3", description = "Members of the alliance", required = False) # type: ignore
                 ):
-    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
     if PlayMan.can_act() is False:
         await ctx.respond(f"The Game is Paused", ephemeral=True)
         return
@@ -36,8 +33,9 @@ async def found(ctx,
         await ctx.respond(f"An alliance with the name {name} already exists", ephemeral=True)
         return
     
-    alliance = Alliance(name) #Name check
-    await alliance.create_alliance(ctx.guild)
+    alliance = await Alliance.create(name, ctx.guild) #Name check
+
+
 
     members = [ctx.author, member1, member2, member3, member4]
     members = [member for member in members if member is not None]
@@ -54,7 +52,8 @@ async def found(ctx,
 
 
 async def autocomplete_alliances(ctx: AutocompleteContext):
-    return [alliance.name for alliance in GameManager.get_manager(ctx.interaction.guild).get_player(ctx.interaction.user).get_alliances()]
+    manager = await GameManager.get_manager(ctx.interaction.guild)
+    return [alli.name for alli in manager.get_player(ctx.interaction.user).get_alliances()]
 
 @alliance.command(
     name="invite",
@@ -64,16 +63,16 @@ async def invite(ctx,
                 alliance: Option(str, name = "alliances", description = "Name of the alliance", autocomplete=autocomplete_alliances), # type: ignore
                 member: Option(Member, name = "member", description = "Member to invite", required = True) # type: ignore
                 ):
-    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
     if PlayMan.can_act() is False:
         await ctx.respond(f"The Game is Paused", ephemeral=True)
         return
     if alliance is None:
         await ctx.respond(f"You are not Member of an Aliiance (uff)", ephemeral=True)
         return
-    alliance: Alliance = GameManager.get_manager(ctx.guild).get_alliance(alliance)
+    alliance: Alliance = PlayMan.get_alliance(alliance)
     await alliance.invite_member(member)
-    await ctx.respond(f"{member.mention} has been invited to {alliance}", ephemeral=True)
+    await ctx.respond(f"{member.mention} has been invited to {alliance.name}", ephemeral=True)
 
 @alliance.command(
     name="leave",
@@ -82,14 +81,13 @@ async def invite(ctx,
 async def leave(ctx,
                 alliance: Option(str, name = "alliances", description = "Name of the alliance", autocomplete=autocomplete_alliances) # type: ignore
                 ):
-    PlayMan = GameManager.get_manager(ctx.guild)
+    PlayMan = await GameManager.get_manager(ctx.guild)
     if PlayMan.can_act() is False:
         await ctx.respond(f"The Game is Paused", ephemeral=True)
         return
     if alliance is None:
         await ctx.respond(f"You are not Member of an Aliiance (uff)", ephemeral=True)
         return
-    PlayMan = GameManager.get_manager(ctx.guild)
     alliance = PlayMan.get_alliance(alliance)
     await alliance.remove_member(ctx.author)
     await ctx.respond(f"You have left the alliance", ephemeral=True)
@@ -102,7 +100,7 @@ async def rename(ctx,
                 alliance: Option(str, name = "alliances", description = "Name of the alliance", autocomplete=autocomplete_alliances), # type: ignore
                 new_name: Option(str, name = "new", description = "New name of the alliance") # type: ignore
                 ):
-    PlayMan: GameManager = GameManager.get_manager(ctx.guild)
+    PlayMan: GameManager = await GameManager.get_manager(ctx.guild)
     if PlayMan.can_act() is False:
         await ctx.respond(f"You are not allowed to found an alliance", ephemeral=True)
         return
